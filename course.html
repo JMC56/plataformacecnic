@@ -122,7 +122,6 @@
     .panelHead h2{ margin:0; font-size: 14px; font-weight: 950; letter-spacing:.2px; }
     .panelHead span{ color: var(--muted); font-size: 12px; font-weight: 800; }
 
-    /* Documento estilo (como tu imagen 4) */
     .docWrap{
       padding: 16px;
       display:grid;
@@ -165,7 +164,6 @@
     .msg.bad{ color: var(--bad); }
     .msg.warn{ color: var(--warn); }
 
-    /* Participantes (solo admin) */
     .box{ padding: 14px; display:grid; gap:12px; }
     .searchRow{
       display:flex; gap:10px; flex-wrap:wrap; align-items:center;
@@ -297,58 +295,139 @@
 </div>
 
 <script>
+/* ==========================
+   API (PHP + JSON)
+========================== */
+const API = "api.php";
+async function apiGet(action, params={}){
+  const qs = new URLSearchParams(params);
+  const res = await fetch(`${API}?action=${encodeURIComponent(action)}&${qs.toString()}`, { cache:"no-store" });
+  if(!res.ok) throw new Error("API GET failed");
+  return await res.json();
+}
+async function apiPost(action, payload){
+  const res = await fetch(`${API}?action=${encodeURIComponent(action)}`, {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify(payload || {})
+  });
+  if(!res.ok) throw new Error("API POST failed");
+  return await res.json();
+}
+
+/* ==========================
+   SESSION + PROTECCIÓN
+========================== */
 const SESSION_KEY = "student_platform_session";
-const DATA_KEY = "student_platform_data_v1";
 const OPEN_COURSE_KEY = "student_platform_open_course";
 const USERS_CACHE_KEY = "student_platform_users_cache";
 
 const session = safeJsonParse(localStorage.getItem(SESSION_KEY));
-if(!session?.email) location.href = "index.html"; // protección
+if(!session?.email) location.href = "index.html";
 
-let data = safeJsonParse(localStorage.getItem(DATA_KEY)) || null;
-if(!data) location.href = "dashboard.html";
-
-const courseId = localStorage.getItem(OPEN_COURSE_KEY);
-const course = (data.courses||[]).find(c => c.id === courseId);
-if(!course) location.href = "dashboard.html";
-
-// Permiso: estudiante solo si matriculado; admin siempre
 const me = (session.email||"").toLowerCase();
 const isAdmin = session.role === "admin";
-const isEnrolled = (course.participants||[]).map(x=>String(x).toLowerCase()).includes(me);
-if(!isAdmin && !isEnrolled){
-  // si intentan entrar a un curso que no es de ellos, rebotar
-  location.href = "dashboard.html";
-}
 
 document.getElementById("roleChip").textContent = isAdmin ? "ADMIN" : "ESTUDIANTE";
-document.getElementById("courseTitle").textContent = course.name || "Curso";
-document.getElementById("courseDesc").textContent = course.desc || "";
-
-// Botones superiores
 document.getElementById("back").onclick = () => location.href = "dashboard.html";
 document.getElementById("logout").onclick = () => { localStorage.removeItem(SESSION_KEY); location.href="index.html"; };
 
-// Documento (visible a todos)
+/* ==========================
+   LOAD COURSE FROM SERVER
+========================== */
+let course = null;
+
+(async function boot(){
+  const courseId = localStorage.getItem(OPEN_COURSE_KEY);
+  if(!courseId) return location.href = "dashboard.html";
+
+  try{
+    // opción limpia: endpoint getCourse
+    const r = await apiGet("getCourse", { id: courseId });
+    course = r?.course || null;
+
+    // fallback si no agregaste getCourse:
+    if(!course){
+      const all = await apiGet("get");
+      course = (all.courses||[]).find(c => c.id === courseId) || null;
+    }
+
+    if(!course) return location.href = "dashboard.html";
+
+    // permisos
+    const enrolled = (course.participants||[]).map(x=>String(x).toLowerCase()).includes(me);
+    if(!isAdmin && !enrolled) return location.href = "dashboard.html";
+
+    // UI
+    document.getElementById("courseTitle").textContent = course.name || "Curso";
+    document.getElementById("courseDesc").textContent  = course.desc || "";
+
+    initDoc();
+    initParticipants();
+
+  }catch(err){
+    console.error(err);
+    alert("No pude cargar el curso. Revisa api.php y permisos de data.json.");
+    location.href = "dashboard.html";
+  }
+})();
+
+/* ==========================
+   DOCUMENTO (AVISOS)
+========================== */
 const docView = document.getElementById("docView");
 const editor = document.getElementById("editor");
 const docEdit = document.getElementById("docEdit");
 const docButtons = document.getElementById("docButtons");
 const docMsg = document.getElementById("docMsg");
 
-renderDoc();
+function initDoc(){
+  renderDoc();
 
-// Botones documento
-docButtons.innerHTML = "";
-if(isAdmin){
-  const btnEdit = mkBtn("Editar documento", "btnSecondary", () => {
-    docEdit.value = course.noticeDoc || "";
-    editor.classList.remove("hidden");
-    setDocMsg("");
-  });
-  docButtons.appendChild(btnEdit);
+  docButtons.innerHTML = "";
+  if(isAdmin){
+    docButtons.appendChild(mkBtn("Editar documento", "btnSecondary", () => {
+      docEdit.value = course.noticeDoc || "";
+      editor.classList.remove("hidden");
+      setDocMsg("");
+    }));
+  }
+
+  document.getElementById("btnSaveDoc").onclick = async () => {
+    if(!isAdmin) return;
+    setDocMsg("Guardando...", "warn");
+
+    const newDoc = docEdit.value || "";
+    course.noticeDoc = newDoc;
+
+    try{
+      const r = await apiPost("updateCourse", { id: course.id, patch: { noticeDoc: newDoc } });
+      if(r?.data?.courses){
+        // opcional: re-sincronizar curso desde respuesta
+      }
+      renderDoc();
+      editor.classList.add("hidden");
+      setDocMsg("Guardado en data.json.", "good");
+    }catch(err){
+      console.error(err);
+      setDocMsg("Error guardando. Revisa permisos de data.json.", "bad");
+    }
+  };
+
+  document.getElementById("btnCancelDoc").onclick = () => {
+    editor.classList.add("hidden");
+    setDocMsg("", "");
+  };
 }
 
+function renderDoc(){
+  const txt = course.noticeDoc || "### Avisos del curso\n\n- Sin avisos aún.";
+  docView.innerHTML = renderMiniMarkdown(txt);
+}
+function setDocMsg(t, k){
+  docMsg.className = "msg" + (k ? " " + k : "");
+  docMsg.textContent = t || "";
+}
 function mkBtn(text, cls, fn){
   const b = document.createElement("button");
   b.className = cls;
@@ -357,42 +436,24 @@ function mkBtn(text, cls, fn){
   return b;
 }
 
-document.getElementById("btnSaveDoc").onclick = () => {
-  if(!isAdmin) return;
-  course.noticeDoc = docEdit.value || "";
-  save();
-  renderDoc();
-  editor.classList.add("hidden");
-  setDocMsg("Guardado.", "good");
-};
-document.getElementById("btnCancelDoc").onclick = () => {
-  editor.classList.add("hidden");
-  setDocMsg("", "");
-};
-
-function renderDoc(){
-  const txt = course.noticeDoc || "### Avisos del curso\n\n- Sin avisos aún.";
-  docView.innerHTML = renderMiniMarkdown(txt);
-}
-
-function setDocMsg(t, k){
-  docMsg.className = "msg" + (k ? " " + k : "");
-  docMsg.textContent = t || "";
-}
-
-// Admin panel participantes
+/* ==========================
+   PARTICIPANTES (ADMIN)
+========================== */
 const adminPanel = document.getElementById("adminPanel");
-if(!isAdmin) adminPanel.classList.add("hidden");
-
 const partCount = document.getElementById("partCount");
 const partsEl = document.getElementById("parts");
 const resultsEl = document.getElementById("results");
 const q = document.getElementById("q");
 
-(async function initAdmin(){
-  renderParticipants();
-  if(!isAdmin) return;
+async function initParticipants(){
+  if(!isAdmin){
+    adminPanel.classList.add("hidden");
+    return;
+  }
 
+  renderParticipants();
+
+  // Cargar usuarios desde users.json (para buscar)
   const usersData = await loadUsersSafe();
   const users = (usersData?.users || []).map(u => ({
     email: String(u.email||"").toLowerCase(),
@@ -405,6 +466,7 @@ const q = document.getElementById("q");
       resultsEl.innerHTML = `<div style="color:rgba(234,240,255,.65);font-size:12.5px">Escribe para buscar alumnos.</div>`;
       return;
     }
+
     const found = users
       .filter(u => u.email.includes(term) || String(u.name).toLowerCase().includes(term))
       .slice(0, 12);
@@ -425,23 +487,31 @@ const q = document.getElementById("q");
         </div>
         <button class="addBtn">Añadir</button>
       `;
-      row.querySelector(".addBtn").onclick = () => {
+
+      row.querySelector(".addBtn").onclick = async () => {
         const list = course.participants || [];
         const lower = list.map(x=>String(x).toLowerCase());
         if(lower.includes(u.email)) return alert("Ya está matriculado.");
-        list.push(u.email);
-        course.participants = list;
-        save();
-        renderParticipants();
-        alert("Matriculado: " + u.email);
+
+        const next = [...list, u.email];
+        course.participants = next;
+
+        try{
+          await apiPost("updateCourse", { id: course.id, patch: { participants: next } });
+          renderParticipants();
+          alert("Matriculado: " + u.email);
+        }catch(err){
+          console.error(err);
+          alert("No se pudo matricular. Revisa permisos de data.json.");
+        }
       };
+
       resultsEl.appendChild(row);
     }
   });
 
-  // estado inicial
   resultsEl.innerHTML = `<div style="color:rgba(234,240,255,.65);font-size:12.5px">Escribe para buscar alumnos.</div>`;
-})();
+}
 
 function renderParticipants(){
   const list = (course.participants || []).slice().sort();
@@ -458,35 +528,51 @@ function renderParticipants(){
     row.className = "part";
     row.innerHTML = `
       <span>${escapeHtml(email)}</span>
-      ${isAdmin ? `<button class="kick">Quitar</button>` : ``}
+      <button class="kick">Quitar</button>
     `;
-    if(isAdmin){
-      row.querySelector(".kick").onclick = () => {
-        if(!confirm("¿Quitar a " + email + " del curso?")) return;
-        course.participants = (course.participants||[]).filter(x => String(x).toLowerCase() !== String(email).toLowerCase());
-        save();
+    row.querySelector(".kick").onclick = async () => {
+      if(!confirm("¿Quitar a " + email + " del curso?")) return;
+
+      const next = (course.participants||[]).filter(x => String(x).toLowerCase() !== String(email).toLowerCase());
+      course.participants = next;
+
+      try{
+        await apiPost("updateCourse", { id: course.id, patch: { participants: next } });
         renderParticipants();
-      };
-    }
+      }catch(err){
+        console.error(err);
+        alert("No se pudo quitar. Revisa permisos de data.json.");
+      }
+    };
     partsEl.appendChild(row);
   }
 }
 
-function save(){
-  // data.courses ya contiene el mismo objeto course; igual guardamos
-  localStorage.setItem(DATA_KEY, JSON.stringify(data));
+/* ==========================
+   USERS.JSON CARGA SEGURA
+========================== */
+async function loadUsersSafe(){
+  const cached = safeJsonParse(localStorage.getItem(USERS_CACHE_KEY));
+  if(cached?.users?.length) return cached;
+  try{
+    const res = await fetch("users.json", { cache:"no-store" });
+    if(!res.ok) throw new Error("users.json not found");
+    const data = await res.json();
+    localStorage.setItem(USERS_CACHE_KEY, JSON.stringify(data));
+    return data;
+  }catch{
+    return { users: [] };
+  }
 }
 
-function safeJsonParse(s){ try{ return JSON.parse(s); }catch{ return null; } }
+/* ==========================
+   MINI MARKDOWN
+========================== */
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[m]));
 }
+function safeJsonParse(s){ try{ return JSON.parse(s); }catch{ return null; } }
 
-// Mini markdown (solo lo necesario)
-// - ### títulos
-// - listas "- "
-// - links [t](url)
-// - saltos de línea
 function renderMiniMarkdown(src){
   const lines = String(src || "").split("\n");
   let out = [];
@@ -511,29 +597,12 @@ function renderMiniMarkdown(src){
 function renderLinks(text){
   let safe = escapeHtml(text);
 
-  // [texto](url)
   safe = safe.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (m, t, u) => {
     return `<a href="${u.replace(/"/g,'&quot;')}" target="_blank" rel="noopener">${t}</a>`;
   });
 
-  // urls directas
   safe = safe.replace(/(https?:\/\/[^\s<]+)/g, (u) => `<a href="${u.replace(/"/g,'&quot;')}" target="_blank" rel="noopener">${u}</a>`);
   return safe;
-}
-
-async function loadUsersSafe(){
-  // intenta cache; si no existe, intenta fetch
-  const cached = safeJsonParse(localStorage.getItem(USERS_CACHE_KEY));
-  if(cached?.users?.length) return cached;
-  try{
-    const res = await fetch("users.json", { cache:"no-store" });
-    if(!res.ok) throw new Error("users.json not found");
-    const data = await res.json();
-    localStorage.setItem(USERS_CACHE_KEY, JSON.stringify(data));
-    return data;
-  }catch{
-    return { users: [] };
-  }
 }
 </script>
 </body>
