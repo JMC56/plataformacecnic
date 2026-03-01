@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Plataforma Estudiantil · Curso</title>
+  <meta name="color-scheme" content="dark light">
+  <style>
+    :root{
+      --bg1:#0b1220;
+      --bg2:#0a0f1a;
+      --glass: rgba(255,255,255,.08);
+      --stroke: rgba(255,255,255,.16);
+      --text:#eaf0ff;
+      --muted: rgba(234,240,255,.72);
+      --shadow: 0 18px 60px rgba(0,0,0,.55);
+      --radius: 18px;
+      --radius2: 24px;
+      --focus: rgba(120,160,255,.35);
+      --good: rgba(70,255,170,.95);
+      --bad: rgba(255, 80, 120, .95);
+      --warn: rgba(255, 200, 80, .95);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      color:var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background: radial-gradient(1200px 800px at 20% 10%, rgba(80,140,255,.22), transparent 55%),
+                  radial-gradient(900px 700px at 85% 20%, rgba(255,110,180,.16), transparent 55%),
+                  radial-gradient(900px 700px at 60% 90%, rgba(70,255,170,.11), transparent 60%),
+                  linear-gradient(180deg, var(--bg1), var(--bg2));
+      min-height:100vh;
+    }
+    .noise{
+      position:fixed; inset:0;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)' opacity='.25'/%3E%3C/svg%3E");
+      mix-blend-mode:overlay;
+      opacity:.22;
+      pointer-events:none;
+    }
+    .wrap{
+      position:relative;
+      z-index:1;
+      padding:18px;
+      display:grid;
+      gap:14px;
+    }
+    .top{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      padding:16px;
+      border-radius: var(--radius2);
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      box-shadow: 0 12px 40px rgba(0,0,0,.25);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    .title h1{ margin:0; font-size: 18px; font-weight: 950; letter-spacing:.2px; }
+    .title p{ margin:6px 0 0 0; color: var(--muted); font-size: 12.5px; }
+
+    .actions{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .chip{
+      padding:6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color: rgba(234,240,255,.85);
+      font-weight: 900;
+      letter-spacing:.2px;
+      font-size: 12px;
+    }
+    .btn{
+      cursor:pointer;
+      border:0;
+      padding: 11px 12px;
+      border-radius: 14px;
+      font-weight: 900;
+      letter-spacing:.2px;
+      color:#08101f;
+      background: linear-gradient(135deg, rgba(120,160,255,.96), rgba(255,110,180,.86));
+    }
+    .btnSecondary{
+      cursor:pointer;
+      padding: 11px 12px;
+      border-radius: 14px;
+      font-weight: 900;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.08);
+      color: rgba(234,240,255,.92);
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: 1.25fr .75fr;
+      gap:14px;
+    }
+    @media (max-width: 1100px){
+      .grid{grid-template-columns:1fr}
+    }
+    .panel{
+      border-radius: var(--radius2);
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      box-shadow: 0 12px 40px rgba(0,0,0,.25);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      overflow:hidden;
+    }
+    .panelHead{
+      padding:14px;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .panelHead h2{ margin:0; font-size: 14px; font-weight: 950; letter-spacing:.2px; }
+    .panelHead span{ color: var(--muted); font-size: 12px; font-weight: 800; }
+
+    /* Documento estilo (como tu imagen 4) */
+    .docWrap{
+      padding: 16px;
+      display:grid;
+      gap:12px;
+    }
+    .doc{
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.20);
+      padding: 16px;
+      min-height: 320px;
+    }
+    .doc p{ margin: 0 0 10px 0; color: rgba(234,240,255,.82); line-height: 1.5; font-size: 13px; }
+    .doc h3{ margin: 0 0 12px 0; font-size: 16px; font-weight: 950; letter-spacing:.2px; }
+    .doc a{ color: rgba(170,200,255,.95); text-decoration:none; }
+    .doc a:hover{ text-decoration: underline; }
+
+    .editor{
+      display:grid;
+      gap:10px;
+    }
+    textarea{
+      width:100%;
+      min-height: 220px;
+      padding: 12px 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(0,0,0,.24);
+      color: var(--text);
+      outline:none;
+      resize: vertical;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.18);
+    }
+    textarea:focus{
+      border-color: rgba(120,160,255,.55);
+      box-shadow: 0 0 0 4px var(--focus), inset 0 0 0 1px rgba(0,0,0,.18);
+    }
+    .msg{ font-size: 12.5px; min-height: 16px; }
+    .msg.good{ color: var(--good); }
+    .msg.bad{ color: var(--bad); }
+    .msg.warn{ color: var(--warn); }
+
+    /* Participantes (solo admin) */
+    .box{ padding: 14px; display:grid; gap:12px; }
+    .searchRow{
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+    }
+    .input{
+      flex:1;
+      padding: 11px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(0,0,0,.22);
+      color: var(--text);
+      outline:none;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.18);
+    }
+    .input:focus{
+      border-color: rgba(120,160,255,.55);
+      box-shadow: 0 0 0 4px var(--focus), inset 0 0 0 1px rgba(0,0,0,.18);
+    }
+    .results{
+      display:grid; gap:8px;
+    }
+    .userRow{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+      padding:10px 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+    }
+    .userRow strong{ font-size: 12.5px; letter-spacing:.2px; }
+    .userRow span{ display:block; font-size: 12px; color: var(--muted); margin-top:3px; }
+    .addBtn{
+      cursor:pointer;
+      border:0;
+      padding: 10px 12px;
+      border-radius: 14px;
+      font-weight: 950;
+      color:#08101f;
+      background: linear-gradient(135deg, rgba(70,255,170,.92), rgba(120,160,255,.86));
+    }
+    .partList{ display:grid; gap:8px; margin-top:6px; }
+    .part{
+      padding:10px 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+      display:flex; gap:10px; align-items:center; justify-content:space-between;
+      font-size: 12.5px;
+      color: rgba(234,240,255,.86);
+    }
+    .kick{
+      cursor:pointer;
+      border: 1px solid rgba(255,120,160,.28);
+      background: rgba(255,80,120,.12);
+      color: rgba(255,160,190,.95);
+      border-radius: 12px;
+      padding: 8px 10px;
+      font-weight: 900;
+    }
+    .hidden{ display:none !important; }
+  </style>
+</head>
+<body>
+<div class="noise"></div>
+
+<div class="wrap">
+  <div class="top">
+    <div class="title">
+      <h1 id="courseTitle">Curso</h1>
+      <p id="courseDesc">...</p>
+    </div>
+    <div class="actions">
+      <span class="chip" id="roleChip">...</span>
+      <button class="btnSecondary" id="back">Volver</button>
+      <button class="btnSecondary" id="logout">Salir</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- DOCUMENTO / AVISOS -->
+    <section class="panel">
+      <div class="panelHead">
+        <h2>Avisos del curso</h2>
+        <span id="docInfo">Visible para todos</span>
+      </div>
+
+      <div class="docWrap">
+        <div class="doc" id="docView"></div>
+
+        <div class="editor hidden" id="editor">
+          <textarea id="docEdit"></textarea>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn" id="btnSaveDoc">Guardar</button>
+            <button class="btnSecondary" id="btnCancelDoc">Cancelar</button>
+          </div>
+          <div class="msg" id="docMsg"></div>
+          <div class="msg warn">
+            Links: usa <b>[texto](https://link.com)</b> o pega URLs directas.
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap" id="docButtons"></div>
+      </div>
+    </section>
+
+    <!-- PARTICIPANTES (ADMIN) -->
+    <aside class="panel" id="adminPanel">
+      <div class="panelHead">
+        <h2>Participantes</h2>
+        <span id="partCount">0</span>
+      </div>
+
+      <div class="box">
+        <div class="searchRow">
+          <input class="input" id="q" placeholder="Buscar usuario por correo o nombre...">
+        </div>
+
+        <div class="results" id="results"></div>
+
+        <div>
+          <div class="chip" style="display:inline-block;margin-bottom:8px">Matriculados</div>
+          <div class="partList" id="parts"></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+const SESSION_KEY = "student_platform_session";
+const DATA_KEY = "student_platform_data_v1";
+const OPEN_COURSE_KEY = "student_platform_open_course";
+const USERS_CACHE_KEY = "student_platform_users_cache";
+
+const session = safeJsonParse(localStorage.getItem(SESSION_KEY));
+if(!session?.email) location.href = "index.html"; // protección
+
+let data = safeJsonParse(localStorage.getItem(DATA_KEY)) || null;
+if(!data) location.href = "dashboard.html";
+
+const courseId = localStorage.getItem(OPEN_COURSE_KEY);
+const course = (data.courses||[]).find(c => c.id === courseId);
+if(!course) location.href = "dashboard.html";
+
+// Permiso: estudiante solo si matriculado; admin siempre
+const me = (session.email||"").toLowerCase();
+const isAdmin = session.role === "admin";
+const isEnrolled = (course.participants||[]).map(x=>String(x).toLowerCase()).includes(me);
+if(!isAdmin && !isEnrolled){
+  // si intentan entrar a un curso que no es de ellos, rebotar
+  location.href = "dashboard.html";
+}
+
+document.getElementById("roleChip").textContent = isAdmin ? "ADMIN" : "ESTUDIANTE";
+document.getElementById("courseTitle").textContent = course.name || "Curso";
+document.getElementById("courseDesc").textContent = course.desc || "";
+
+// Botones superiores
+document.getElementById("back").onclick = () => location.href = "dashboard.html";
+document.getElementById("logout").onclick = () => { localStorage.removeItem(SESSION_KEY); location.href="index.html"; };
+
+// Documento (visible a todos)
+const docView = document.getElementById("docView");
+const editor = document.getElementById("editor");
+const docEdit = document.getElementById("docEdit");
+const docButtons = document.getElementById("docButtons");
+const docMsg = document.getElementById("docMsg");
+
+renderDoc();
+
+// Botones documento
+docButtons.innerHTML = "";
+if(isAdmin){
+  const btnEdit = mkBtn("Editar documento", "btnSecondary", () => {
+    docEdit.value = course.noticeDoc || "";
+    editor.classList.remove("hidden");
+    setDocMsg("");
+  });
+  docButtons.appendChild(btnEdit);
+}
+
+function mkBtn(text, cls, fn){
+  const b = document.createElement("button");
+  b.className = cls;
+  b.textContent = text;
+  b.onclick = fn;
+  return b;
+}
+
+document.getElementById("btnSaveDoc").onclick = () => {
+  if(!isAdmin) return;
+  course.noticeDoc = docEdit.value || "";
+  save();
+  renderDoc();
+  editor.classList.add("hidden");
+  setDocMsg("Guardado.", "good");
+};
+document.getElementById("btnCancelDoc").onclick = () => {
+  editor.classList.add("hidden");
+  setDocMsg("", "");
+};
+
+function renderDoc(){
+  const txt = course.noticeDoc || "### Avisos del curso\n\n- Sin avisos aún.";
+  docView.innerHTML = renderMiniMarkdown(txt);
+}
+
+function setDocMsg(t, k){
+  docMsg.className = "msg" + (k ? " " + k : "");
+  docMsg.textContent = t || "";
+}
+
+// Admin panel participantes
+const adminPanel = document.getElementById("adminPanel");
+if(!isAdmin) adminPanel.classList.add("hidden");
+
+const partCount = document.getElementById("partCount");
+const partsEl = document.getElementById("parts");
+const resultsEl = document.getElementById("results");
+const q = document.getElementById("q");
+
+(async function initAdmin(){
+  renderParticipants();
+  if(!isAdmin) return;
+
+  const usersData = await loadUsersSafe();
+  const users = (usersData?.users || []).map(u => ({
+    email: String(u.email||"").toLowerCase(),
+    name: u.name || u.email || ""
+  }));
+
+  q.addEventListener("input", () => {
+    const term = q.value.trim().toLowerCase();
+    if(!term){
+      resultsEl.innerHTML = `<div style="color:rgba(234,240,255,.65);font-size:12.5px">Escribe para buscar alumnos.</div>`;
+      return;
+    }
+    const found = users
+      .filter(u => u.email.includes(term) || String(u.name).toLowerCase().includes(term))
+      .slice(0, 12);
+
+    resultsEl.innerHTML = "";
+    if(!found.length){
+      resultsEl.innerHTML = `<div style="color:rgba(234,240,255,.65);font-size:12.5px">No hay coincidencias.</div>`;
+      return;
+    }
+
+    for(const u of found){
+      const row = document.createElement("div");
+      row.className = "userRow";
+      row.innerHTML = `
+        <div>
+          <strong>${escapeHtml(u.name)}</strong>
+          <span>${escapeHtml(u.email)}</span>
+        </div>
+        <button class="addBtn">Añadir</button>
+      `;
+      row.querySelector(".addBtn").onclick = () => {
+        const list = course.participants || [];
+        const lower = list.map(x=>String(x).toLowerCase());
+        if(lower.includes(u.email)) return alert("Ya está matriculado.");
+        list.push(u.email);
+        course.participants = list;
+        save();
+        renderParticipants();
+        alert("Matriculado: " + u.email);
+      };
+      resultsEl.appendChild(row);
+    }
+  });
+
+  // estado inicial
+  resultsEl.innerHTML = `<div style="color:rgba(234,240,255,.65);font-size:12.5px">Escribe para buscar alumnos.</div>`;
+})();
+
+function renderParticipants(){
+  const list = (course.participants || []).slice().sort();
+  partCount.textContent = `${list.length} matriculados`;
+
+  partsEl.innerHTML = "";
+  if(!list.length){
+    partsEl.innerHTML = `<div style="color:rgba(234,240,255,.65);font-size:12.5px">Aún no hay matriculados.</div>`;
+    return;
+  }
+
+  for(const email of list){
+    const row = document.createElement("div");
+    row.className = "part";
+    row.innerHTML = `
+      <span>${escapeHtml(email)}</span>
+      ${isAdmin ? `<button class="kick">Quitar</button>` : ``}
+    `;
+    if(isAdmin){
+      row.querySelector(".kick").onclick = () => {
+        if(!confirm("¿Quitar a " + email + " del curso?")) return;
+        course.participants = (course.participants||[]).filter(x => String(x).toLowerCase() !== String(email).toLowerCase());
+        save();
+        renderParticipants();
+      };
+    }
+    partsEl.appendChild(row);
+  }
+}
+
+function save(){
+  // data.courses ya contiene el mismo objeto course; igual guardamos
+  localStorage.setItem(DATA_KEY, JSON.stringify(data));
+}
+
+function safeJsonParse(s){ try{ return JSON.parse(s); }catch{ return null; } }
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[m]));
+}
+
+// Mini markdown (solo lo necesario)
+// - ### títulos
+// - listas "- "
+// - links [t](url)
+// - saltos de línea
+function renderMiniMarkdown(src){
+  const lines = String(src || "").split("\n");
+  let out = [];
+  for(const line of lines){
+    if(line.startsWith("### ")){
+      out.push(`<h3>${escapeHtml(line.slice(4))}</h3>`);
+      continue;
+    }
+    if(line.startsWith("- ")){
+      out.push(`<p>• ${renderLinks(line.slice(2))}</p>`);
+      continue;
+    }
+    if(!line.trim()){
+      out.push(`<p style="opacity:.55"> </p>`);
+      continue;
+    }
+    out.push(`<p>${renderLinks(line)}</p>`);
+  }
+  return out.join("");
+}
+
+function renderLinks(text){
+  let safe = escapeHtml(text);
+
+  // [texto](url)
+  safe = safe.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (m, t, u) => {
+    return `<a href="${u.replace(/"/g,'&quot;')}" target="_blank" rel="noopener">${t}</a>`;
+  });
+
+  // urls directas
+  safe = safe.replace(/(https?:\/\/[^\s<]+)/g, (u) => `<a href="${u.replace(/"/g,'&quot;')}" target="_blank" rel="noopener">${u}</a>`);
+  return safe;
+}
+
+async function loadUsersSafe(){
+  // intenta cache; si no existe, intenta fetch
+  const cached = safeJsonParse(localStorage.getItem(USERS_CACHE_KEY));
+  if(cached?.users?.length) return cached;
+  try{
+    const res = await fetch("users.json", { cache:"no-store" });
+    if(!res.ok) throw new Error("users.json not found");
+    const data = await res.json();
+    localStorage.setItem(USERS_CACHE_KEY, JSON.stringify(data));
+    return data;
+  }catch{
+    return { users: [] };
+  }
+}
+</script>
+</body>
+</html>
