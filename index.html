@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Plataforma Estudiantil · Login</title>
+  <meta name="color-scheme" content="dark light">
+  <style>
+    :root{
+      --bg1:#0b1220;
+      --bg2:#0a0f1a;
+      --glass: rgba(255,255,255,.08);
+      --glass2: rgba(255,255,255,.12);
+      --stroke: rgba(255,255,255,.18);
+      --text:#eaf0ff;
+      --muted: rgba(234,240,255,.72);
+      --shadow: 0 18px 60px rgba(0,0,0,.55);
+      --radius: 18px;
+      --radius2: 26px;
+      --focus: rgba(120,160,255,.35);
+      --good: rgba(70, 255, 170, .95);
+      --bad: rgba(255, 80, 120, .95);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      color:var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Helvetica Neue";
+      background: radial-gradient(1200px 800px at 25% 20%, rgba(80,140,255,.22), transparent 55%),
+                  radial-gradient(900px 700px at 75% 30%, rgba(255,110,180,.18), transparent 55%),
+                  radial-gradient(900px 700px at 60% 80%, rgba(70,255,170,.12), transparent 60%),
+                  linear-gradient(180deg, var(--bg1), var(--bg2));
+      overflow:hidden;
+    }
+    .noise{
+      position:fixed; inset:0;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)' opacity='.25'/%3E%3C/svg%3E");
+      mix-blend-mode:overlay;
+      opacity:.22;
+      pointer-events:none;
+    }
+    .wrap{
+      position:relative;
+      height:100%;
+      display:grid;
+      place-items:center;
+      padding:22px;
+    }
+    .card{
+      width:min(980px, 100%);
+      display:grid;
+      grid-template-columns: 1.05fr .95fr;
+      gap:18px;
+      padding:18px;
+      border-radius: var(--radius2);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.05));
+      border: 1px solid var(--stroke);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      overflow:hidden;
+    }
+    @media (max-width: 900px){
+      .card{grid-template-columns:1fr}
+    }
+    .left{
+      position:relative;
+      border-radius: var(--radius);
+      padding:22px;
+      border:1px solid rgba(255,255,255,.12);
+      background: radial-gradient(700px 400px at 20% 15%, rgba(120,160,255,.22), transparent 60%),
+                  radial-gradient(700px 400px at 80% 20%, rgba(255,110,180,.16), transparent 60%),
+                  linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+      overflow:hidden;
+      min-height: 380px;
+    }
+    .brand{
+      display:flex; align-items:center; gap:12px;
+    }
+    .logo{
+      width:44px; height:44px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(120,160,255,.9), rgba(255,110,180,.75));
+      box-shadow: 0 16px 50px rgba(120,160,255,.18);
+      position:relative;
+    }
+    .logo:after{
+      content:"";
+      position:absolute; inset:2px;
+      border-radius: 12px;
+      border:1px solid rgba(255,255,255,.35);
+      opacity:.55;
+    }
+    .title{
+      font-size: 18px;
+      font-weight: 750;
+      letter-spacing:.2px;
+      line-height: 1.15;
+      margin:0;
+    }
+    .subtitle{
+      margin:6px 0 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height:1.35;
+      max-width: 52ch;
+    }
+    .bullets{
+      margin-top: 18px;
+      display:grid;
+      gap:10px;
+      font-size: 13px;
+      color: rgba(234,240,255,.82);
+    }
+    .pill{
+      display:flex; gap:10px; align-items:flex-start;
+      padding:10px 12px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.10);
+    }
+    .dot{
+      width:10px; height:10px; border-radius: 99px;
+      background: rgba(70,255,170,.95);
+      box-shadow: 0 0 0 4px rgba(70,255,170,.15);
+      margin-top: 3px;
+      flex:0 0 auto;
+    }
+
+    .right{
+      border-radius: var(--radius);
+      padding:22px;
+      border:1px solid rgba(255,255,255,.12);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+    }
+    .formTitle{
+      margin:0 0 8px 0;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing:.2px;
+    }
+    .formHint{
+      margin:0 0 16px 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .field{
+      display:grid;
+      gap:8px;
+      margin: 12px 0;
+    }
+    label{
+      font-size: 12px;
+      color: rgba(234,240,255,.78);
+      letter-spacing:.3px;
+    }
+    .input{
+      width:100%;
+      padding: 12px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(0,0,0,.22);
+      color: var(--text);
+      outline:none;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.18);
+      transition: .18s ease;
+    }
+    .input:focus{
+      border-color: rgba(120,160,255,.55);
+      box-shadow: 0 0 0 4px var(--focus), inset 0 0 0 1px rgba(0,0,0,.18);
+    }
+    .row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+      margin-top: 14px;
+      flex-wrap:wrap;
+    }
+    .btn{
+      cursor:pointer;
+      border:0;
+      padding: 12px 14px;
+      border-radius: 14px;
+      font-weight: 800;
+      letter-spacing:.2px;
+      color:#08101f;
+      background: linear-gradient(135deg, rgba(120,160,255,.96), rgba(255,110,180,.86));
+      box-shadow: 0 18px 50px rgba(120,160,255,.18);
+      transition: transform .12s ease, filter .12s ease;
+      min-width: 160px;
+    }
+    .btn:hover{ transform: translateY(-1px); filter: brightness(1.02); }
+    .btn:active{ transform: translateY(0px); filter: brightness(.98); }
+
+    .mini{
+      font-size: 12px;
+      color: rgba(234,240,255,.7);
+      display:flex; gap:10px; align-items:center;
+    }
+    .chip{
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color: rgba(234,240,255,.85);
+      font-weight: 700;
+      letter-spacing:.2px;
+    }
+    .msg{
+      margin-top: 12px;
+      font-size: 13px;
+      min-height: 18px;
+      color: rgba(234,240,255,.84);
+    }
+    .msg.good{ color: var(--good); }
+    .msg.bad{ color: var(--bad); }
+
+    .footer{
+      margin-top: 18px;
+      font-size: 11px;
+      color: rgba(234,240,255,.55);
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+      flex-wrap:wrap;
+    }
+    a{ color: rgba(170,200,255,.95); text-decoration: none; }
+    a:hover{ text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="noise"></div>
+
+  <div class="wrap">
+    <div class="card">
+      <section class="left">
+        <div class="brand">
+          <div class="logo"></div>
+          <div>
+            <p class="title">Plataforma Estudiantil</p>
+            <p class="subtitle">Acceso a cursos, avisos, documentos y recursos. Diseño glass, rápido y ordenado.</p>
+          </div>
+        </div>
+
+        <div class="bullets">
+          <div class="pill"><div class="dot"></div><div>Ingreso seguro por sesión (si intentan entrar sin login, regresa al inicio).</div></div>
+          <div class="pill"><div class="dot"></div><div>Dashboard con anuncios con imagen (Imgur) y cursos matriculados.</div></div>
+          <div class="pill"><div class="dot"></div><div>Admin: crear cursos, matricular alumnos y editar avisos tipo “documento”.</div></div>
+        </div>
+      </section>
+
+      <section class="right">
+        <h1 class="formTitle">Iniciar sesión</h1>
+        <p class="formHint">Usa tu correo y contraseña. Los usuarios se cargan desde <span class="chip">users.json</span>.</p>
+
+        <form id="form">
+          <div class="field">
+            <label for="email">CORREO</label>
+            <input class="input" id="email" type="email" autocomplete="username" placeholder="alumno@tucolegio.com" required>
+          </div>
+
+          <div class="field">
+            <label for="pass">CONTRASEÑA</label>
+            <input class="input" id="pass" type="password" autocomplete="current-password" placeholder="••••••••" required>
+          </div>
+
+          <div class="row">
+            <button class="btn" type="submit">Entrar</button>
+            <div class="mini">
+              <span class="chip" id="statusChip">Listo</span>
+              <span id="usersInfo"></span>
+            </div>
+          </div>
+
+          <div class="msg" id="msg"></div>
+
+          <div class="footer">
+            <span>Consejo: abre esto con un servidor (Live Server) para que funcione el fetch.</span>
+            <span><a href="#" id="demoFill">Rellenar demo</a></span>
+          </div>
+        </form>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const SESSION_KEY = "student_platform_session";
+    const USERS_CACHE_KEY = "student_platform_users_cache";
+
+    const elMsg = document.getElementById("msg");
+    const elUsersInfo = document.getElementById("usersInfo");
+    const elStatusChip = document.getElementById("statusChip");
+
+    // Si ya está logueado, directo al dashboard
+    const existing = safeJsonParse(localStorage.getItem(SESSION_KEY));
+    if (existing?.email) location.href = "dashboard.html";
+
+    document.getElementById("demoFill").onclick = (e) => {
+      e.preventDefault();
+      document.getElementById("email").value = "admin@tucolegio.com";
+      document.getElementById("pass").value = "1234";
+    };
+
+    document.getElementById("form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      setMsg("");
+
+      const email = document.getElementById("email").value.trim().toLowerCase();
+      const pass = document.getElementById("pass").value;
+
+      try{
+        elStatusChip.textContent = "Cargando...";
+        const data = await loadUsers();
+        const users = data.users || [];
+        const adminEmail = (data.adminEmail || "").toLowerCase();
+
+        const u = users.find(x => (x.email||"").toLowerCase() === email && (x.password||"") === pass);
+        if(!u){
+          setMsg("Correo o contraseña incorrectos.", "bad");
+          elStatusChip.textContent = "Error";
+          return;
+        }
+
+        const role = (u.role || (email === adminEmail ? "admin" : "student"));
+        const session = { email, name: u.name || email.split("@")[0], role, ts: Date.now() };
+        localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+
+        setMsg("¡Listo! Entrando...", "good");
+        elStatusChip.textContent = "OK";
+        setTimeout(()=> location.href="dashboard.html", 450);
+      }catch(err){
+        console.error(err);
+        setMsg("No pude cargar users.json. Asegúrate de usar Live Server y que el archivo exista.", "bad");
+        elStatusChip.textContent = "Offline";
+      }
+    });
+
+    (async function boot(){
+      try{
+        const data = await loadUsers();
+        const count = (data.users||[]).length;
+        elUsersInfo.textContent = count ? `Usuarios cargados: ${count}` : "";
+        elStatusChip.textContent = "Online";
+      }catch{
+        elUsersInfo.textContent = "";
+        elStatusChip.textContent = "Offline";
+      }
+    })();
+
+    function setMsg(text, kind){
+      elMsg.className = "msg" + (kind ? " " + kind : "");
+      elMsg.textContent = text || "";
+    }
+    function safeJsonParse(s){ try{ return JSON.parse(s); }catch{ return null; } }
+
+    async function loadUsers(){
+      // cache por si refresca
+      const cached = safeJsonParse(localStorage.getItem(USERS_CACHE_KEY));
+      if (cached?.users?.length) return cached;
+
+      const res = await fetch("users.json", { cache: "no-store" });
+      if(!res.ok) throw new Error("users.json not found");
+      const data = await res.json();
+      localStorage.setItem(USERS_CACHE_KEY, JSON.stringify(data));
+      return data;
+    }
+  </script>
+</body>
+</html>
