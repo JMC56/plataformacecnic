@@ -15,8 +15,8 @@ function readData($file){
   $raw = file_get_contents($file);
   $json = json_decode($raw, true);
   if(!is_array($json)) $json = ["announcements"=>[], "courses"=>[]];
-  if(!isset($json["announcements"])) $json["announcements"] = [];
-  if(!isset($json["courses"])) $json["courses"] = [];
+  if(!isset($json["announcements"]) || !is_array($json["announcements"])) $json["announcements"] = [];
+  if(!isset($json["courses"]) || !is_array($json["courses"])) $json["courses"] = [];
   return $json;
 }
 
@@ -27,15 +27,34 @@ function writeData($file, $data){
 
 $action = $_GET["action"] ?? "";
 
+/* ==========================
+   GET
+========================== */
 if ($_SERVER["REQUEST_METHOD"] === "GET") {
+
   if($action === "get"){
     echo json_encode(readData($dataFile));
     exit;
   }
+
+  if($action === "getCourse"){
+    $id = $_GET["id"] ?? "";
+    $db = readData($dataFile);
+    $found = null;
+    foreach($db["courses"] as $c){
+      if(($c["id"] ?? "") === $id){ $found = $c; break; }
+    }
+    echo json_encode(["ok"=>true, "course"=>$found]);
+    exit;
+  }
+
   echo json_encode(["ok"=>false, "error"=>"Invalid action"]);
   exit;
 }
 
+/* ==========================
+   POST
+========================== */
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
   $body = json_decode(file_get_contents("php://input"), true);
   if(!is_array($body)) $body = [];
@@ -48,7 +67,25 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       echo json_encode(["ok"=>false, "error"=>"Missing course"]);
       exit;
     }
+    if(!isset($course["participants"]) || !is_array($course["participants"])) $course["participants"] = [];
+    if(!isset($course["noticeDoc"])) $course["noticeDoc"] = "";
+
     array_unshift($db["courses"], $course);
+    writeData($dataFile, $db);
+    echo json_encode(["ok"=>true, "data"=>$db]);
+    exit;
+  }
+
+  if($action === "seedDemo"){
+    $items = $body["courses"] ?? [];
+    if(!is_array($items)) $items = [];
+    foreach(array_reverse($items) as $c){
+      if(is_array($c) && !empty($c["id"]) && !empty($c["name"])){
+        if(!isset($c["participants"]) || !is_array($c["participants"])) $c["participants"] = [];
+        if(!isset($c["noticeDoc"])) $c["noticeDoc"] = "";
+        array_unshift($db["courses"], $c);
+      }
+    }
     writeData($dataFile, $db);
     echo json_encode(["ok"=>true, "data"=>$db]);
     exit;
@@ -60,7 +97,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       echo json_encode(["ok"=>false, "error"=>"Missing announcement"]);
       exit;
     }
+    if(!isset($ann["text"])) $ann["text"] = "";
+    if(!isset($ann["image"])) $ann["image"] = "";
+
     array_unshift($db["announcements"], $ann);
+    writeData($dataFile, $db);
+    echo json_encode(["ok"=>true, "data"=>$db]);
+    exit;
+  }
+
+  if($action === "clearAnnouncements"){
+    $db["announcements"] = [];
     writeData($dataFile, $db);
     echo json_encode(["ok"=>true, "data"=>$db]);
     exit;
@@ -73,19 +120,32 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       echo json_encode(["ok"=>false, "error"=>"Missing id/patch"]);
       exit;
     }
-    foreach($db["courses"] as &$c){
+
+    $updated = false;
+    for($i=0; $i<count($db["courses"]); $i++){
+      $c = $db["courses"][$i];
       if(($c["id"] ?? "") === $id){
         foreach($patch as $k=>$v){
-          $c[$k] = $v;
+          // Solo permitimos editar campos seguros
+          if($k === "name" || $k === "desc" || $k === "noticeDoc" || $k === "participants"){
+            $db["courses"][$i][$k] = $v;
+          }
         }
+        $updated = true;
         break;
       }
     }
+
     writeData($dataFile, $db);
-    echo json_encode(["ok"=>true, "data"=>$db]);
+    echo json_encode(["ok"=>true, "updated"=>$updated, "data"=>$db]);
     exit;
   }
 
   echo json_encode(["ok"=>false, "error"=>"Invalid action"]);
   exit;
 }
+
+/* ==========================
+   FALLBACK
+========================== */
+echo json_encode(["ok"=>false, "error"=>"Unsupported method"]);
