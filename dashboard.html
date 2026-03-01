@@ -1,0 +1,835 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Plataforma Estudiantil · Dashboard</title>
+  <meta name="color-scheme" content="dark light">
+  <style>
+    :root{
+      --bg1:#0b1220;
+      --bg2:#0a0f1a;
+      --glass: rgba(255,255,255,.08);
+      --glass2: rgba(255,255,255,.12);
+      --stroke: rgba(255,255,255,.16);
+      --text:#eaf0ff;
+      --muted: rgba(234,240,255,.72);
+      --shadow: 0 18px 60px rgba(0,0,0,.55);
+      --radius: 18px;
+      --radius2: 24px;
+      --focus: rgba(120,160,255,.35);
+      --good: rgba(70,255,170,.95);
+      --bad: rgba(255, 80, 120, .95);
+      --warn: rgba(255, 200, 80, .95);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      color:var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Helvetica Neue";
+      background: radial-gradient(1200px 800px at 20% 10%, rgba(80,140,255,.22), transparent 55%),
+                  radial-gradient(900px 700px at 85% 20%, rgba(255,110,180,.16), transparent 55%),
+                  radial-gradient(900px 700px at 60% 90%, rgba(70,255,170,.11), transparent 60%),
+                  linear-gradient(180deg, var(--bg1), var(--bg2));
+    }
+    .noise{
+      position:fixed; inset:0;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)' opacity='.25'/%3E%3C/svg%3E");
+      mix-blend-mode:overlay;
+      opacity:.22;
+      pointer-events:none;
+      z-index:0;
+    }
+    .app{
+      position:relative;
+      z-index:1;
+      min-height:100%;
+      display:grid;
+      grid-template-columns: 280px 1fr;
+    }
+    @media (max-width: 980px){
+      .app{grid-template-columns:1fr}
+      .sidebar{position:sticky; top:0; z-index:5}
+    }
+    .sidebar{
+      padding:18px;
+      border-right:1px solid rgba(255,255,255,.08);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    .brand{
+      display:flex; align-items:center; gap:12px;
+      padding:14px;
+      border-radius: var(--radius2);
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      box-shadow: 0 12px 40px rgba(0,0,0,.25);
+    }
+    .logo{
+      width:42px; height:42px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(120,160,255,.96), rgba(255,110,180,.86));
+      position:relative;
+    }
+    .logo:after{
+      content:""; position:absolute; inset:2px;
+      border:1px solid rgba(255,255,255,.35);
+      border-radius: 12px; opacity:.55;
+    }
+    .btitle{margin:0; font-size:14px; font-weight:850; letter-spacing:.2px}
+    .bsub{margin:3px 0 0 0; font-size:12px; color:var(--muted)}
+    .nav{
+      margin-top: 14px;
+      display:grid;
+      gap:10px;
+    }
+    .navBtn{
+      width:100%;
+      text-align:left;
+      cursor:pointer;
+      padding:12px 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      color: rgba(234,240,255,.9);
+      font-weight: 800;
+      letter-spacing:.2px;
+      transition:.14s ease;
+    }
+    .navBtn:hover{ transform: translateY(-1px); background: rgba(255,255,255,.07); }
+    .navBtn.active{
+      background: linear-gradient(135deg, rgba(120,160,255,.22), rgba(255,110,180,.14));
+      border-color: rgba(120,160,255,.35);
+      box-shadow: 0 16px 45px rgba(120,160,255,.12);
+    }
+    .small{
+      display:flex; gap:10px; align-items:center; justify-content:space-between;
+      margin-top: 14px;
+      padding:12px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+    }
+    .chip{
+      padding:6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color: rgba(234,240,255,.85);
+      font-weight: 800;
+      letter-spacing:.2px;
+      font-size: 12px;
+    }
+    .logout{
+      cursor:pointer;
+      border:0;
+      padding:10px 12px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.16);
+      color: rgba(234,240,255,.9);
+      font-weight: 850;
+    }
+    .logout:hover{ background: rgba(255,255,255,.10); }
+
+    .main{
+      padding:18px;
+      display:grid;
+      gap:14px;
+    }
+    .topbar{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      justify-content:space-between;
+      flex-wrap:wrap;
+      padding:16px;
+      border-radius: var(--radius2);
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      box-shadow: 0 12px 40px rgba(0,0,0,.25);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    .hello h1{
+      margin:0;
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing:.2px;
+    }
+    .hello p{
+      margin:6px 0 0 0;
+      color: var(--muted);
+      font-size: 12.5px;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap:14px;
+    }
+    @media (max-width: 1100px){
+      .grid{grid-template-columns:1fr}
+    }
+
+    .panel{
+      border-radius: var(--radius2);
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      box-shadow: 0 12px 40px rgba(0,0,0,.25);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      overflow:hidden;
+    }
+    .panelHead{
+      padding:14px 14px 10px 14px;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .panelHead h2{
+      margin:0;
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing:.2px;
+    }
+    .panelHead span{
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .annList{
+      padding:14px;
+      display:grid;
+      gap:12px;
+    }
+    .ann{
+      display:grid;
+      grid-template-columns: 160px 1fr;
+      gap:12px;
+      padding:12px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+      overflow:hidden;
+    }
+    @media (max-width: 700px){
+      .ann{grid-template-columns:1fr}
+    }
+    .annImg{
+      width:100%;
+      height: 110px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      overflow:hidden;
+      position:relative;
+    }
+    .annImg img{
+      width:100%; height:100%; object-fit:cover; display:block;
+      filter: saturate(1.05);
+    }
+    .annTitle{ margin:0; font-size: 13.5px; font-weight: 950; letter-spacing:.2px; }
+    .annText{ margin:6px 0 0 0; font-size: 12.5px; color: rgba(234,240,255,.76); line-height: 1.35; }
+    .annMeta{ margin-top:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .tag{
+      font-size: 11px;
+      font-weight: 850;
+      color: rgba(234,240,255,.85);
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      padding: 5px 9px;
+      border-radius: 999px;
+    }
+
+    .courseList{
+      padding:14px;
+      display:grid;
+      gap:10px;
+    }
+    .course{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      justify-content:space-between;
+      padding:12px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+    }
+    .course strong{ font-size: 13px; letter-spacing:.2px; }
+    .course span{ color: var(--muted); font-size: 12px; display:block; margin-top:3px; }
+    .go{
+      cursor:pointer;
+      border:0;
+      padding: 10px 12px;
+      border-radius: 14px;
+      font-weight: 900;
+      color:#08101f;
+      background: linear-gradient(135deg, rgba(120,160,255,.96), rgba(255,110,180,.86));
+    }
+    .go:hover{ filter: brightness(1.02); transform: translateY(-1px); }
+    .go:active{ transform: translateY(0); filter: brightness(.98); }
+
+    .adminBox{
+      padding:14px;
+      display:grid;
+      gap:10px;
+    }
+    .field{ display:grid; gap:7px; }
+    label{ font-size: 11.5px; color: rgba(234,240,255,.75); letter-spacing:.3px; }
+    .input, .textarea{
+      width:100%;
+      padding: 11px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(0,0,0,.22);
+      color: var(--text);
+      outline:none;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.18);
+      transition: .18s ease;
+    }
+    .input:focus,.textarea:focus{
+      border-color: rgba(120,160,255,.55);
+      box-shadow: 0 0 0 4px var(--focus), inset 0 0 0 1px rgba(0,0,0,.18);
+    }
+    .textarea{ min-height: 90px; resize: vertical; }
+    .btnRow{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .btn{
+      cursor:pointer;
+      border:0;
+      padding: 11px 12px;
+      border-radius: 14px;
+      font-weight: 900;
+      letter-spacing:.2px;
+      color:#08101f;
+      background: linear-gradient(135deg, rgba(120,160,255,.96), rgba(255,110,180,.86));
+    }
+    .btnSecondary{
+      cursor:pointer;
+      padding: 11px 12px;
+      border-radius: 14px;
+      font-weight: 900;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.08);
+      color: rgba(234,240,255,.92);
+    }
+    .btnDanger{
+      cursor:pointer;
+      padding: 11px 12px;
+      border-radius: 14px;
+      font-weight: 900;
+      border: 1px solid rgba(255,120,160,.28);
+      background: rgba(255,80,120,.12);
+      color: rgba(255,160,190,.95);
+    }
+    .note{ font-size: 12px; color: rgba(234,240,255,.68); line-height:1.35; }
+    .msg{ font-size: 12.5px; min-height: 16px; }
+    .msg.good{ color: var(--good); }
+    .msg.bad{ color: var(--bad); }
+    .msg.warn{ color: var(--warn); }
+
+    .hidden{ display:none !important; }
+    a{ color: rgba(170,200,255,.95); text-decoration:none; }
+    a:hover{ text-decoration: underline; }
+  </style>
+</head>
+<body>
+<div class="noise"></div>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo"></div>
+      <div>
+        <p class="btitle">Plataforma Estudiantil</p>
+        <p class="bsub" id="who">...</p>
+      </div>
+    </div>
+
+    <div class="nav">
+      <button class="navBtn active" data-view="home">Dashboard</button>
+      <button class="navBtn" data-view="courses">Mis cursos</button>
+      <button class="navBtn" data-view="admin" id="adminNav">Admin</button>
+    </div>
+
+    <div class="small">
+      <span class="chip" id="roleChip">...</span>
+      <button class="logout" id="logout">Salir</button>
+    </div>
+
+    <div class="small" style="margin-top:10px">
+      <span class="chip">Datos</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="logout" id="btnExport" title="Exportar JSON">Export</button>
+        <label class="logout" style="cursor:pointer">
+          Import
+          <input id="fileImport" type="file" accept="application/json" style="display:none">
+        </label>
+      </div>
+    </div>
+
+    <p class="note" style="margin-top:12px">
+      Nota: Esta versión guarda todo en <b>localStorage</b>.
+      Si querés “guardar como JSON”, usa <b>Export</b> y luego <b>Import</b>.
+    </p>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="hello">
+        <h1 id="helloTitle">Dashboard</h1>
+        <p id="helloSub">Cargando...</p>
+      </div>
+      <span class="chip" id="clock"></span>
+    </div>
+
+    <!-- VISTA DASH -->
+    <section class="grid" id="view-home">
+      <div class="panel">
+        <div class="panelHead">
+          <h2>Avisos y novedades generales</h2>
+          <span id="annCount">0</span>
+        </div>
+        <div class="annList" id="annList"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panelHead">
+          <h2>Accesos rápidos</h2>
+          <span>Tu actividad</span>
+        </div>
+        <div class="courseList" id="quickCourses"></div>
+      </div>
+    </section>
+
+    <!-- VISTA CURSOS -->
+    <section class="grid hidden" id="view-courses" style="grid-template-columns:1fr">
+      <div class="panel">
+        <div class="panelHead">
+          <h2>Mis cursos</h2>
+          <span id="myCourseCount">0</span>
+        </div>
+        <div class="courseList" id="myCourses"></div>
+      </div>
+    </section>
+
+    <!-- VISTA ADMIN -->
+    <section class="grid hidden" id="view-admin" style="grid-template-columns: 1fr 1fr">
+      <div class="panel">
+        <div class="panelHead">
+          <h2>Crear curso</h2>
+          <span>Solo admin</span>
+        </div>
+        <div class="adminBox">
+          <div class="field">
+            <label>NOMBRE DEL CURSO</label>
+            <input class="input" id="courseName" placeholder="Ej: Física Séptimo Grado">
+          </div>
+          <div class="field">
+            <label>DESCRIPCIÓN</label>
+            <textarea class="textarea" id="courseDesc" placeholder="Breve descripción..."></textarea>
+          </div>
+          <div class="btnRow">
+            <button class="btn" id="btnCreateCourse">Crear</button>
+            <button class="btnSecondary" id="btnSeedDemo">Cargar demo</button>
+          </div>
+          <div class="msg" id="adminMsg"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panelHead">
+          <h2>Publicar aviso general</h2>
+          <span>Con imagen</span>
+        </div>
+        <div class="adminBox">
+          <div class="field">
+            <label>TÍTULO</label>
+            <input class="input" id="annTitle" placeholder="Ej: Cronograma de exámenes">
+          </div>
+          <div class="field">
+            <label>IMAGEN (URL / IMGUR)</label>
+            <input class="input" id="annImg" placeholder="https://i.imgur.com/xxxxx.jpg">
+          </div>
+          <div class="field">
+            <label>TEXTO</label>
+            <textarea class="textarea" id="annText" placeholder="Detalle corto del aviso..."></textarea>
+          </div>
+          <div class="btnRow">
+            <button class="btn" id="btnPostAnn">Publicar</button>
+            <button class="btnDanger" id="btnClearAnns">Borrar todos</button>
+          </div>
+          <div class="note">
+            Tip links: podés escribir URLs normales, o usar formato <b>[texto](https://link.com)</b>.
+          </div>
+          <div class="msg" id="annMsg"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+/* ==========================
+   CONFIG + STORAGE
+========================== */
+const SESSION_KEY = "student_platform_session";
+const DATA_KEY = "student_platform_data_v1";
+
+const DEFAULT_DATA = {
+  announcements: [
+    {
+      id: uid(),
+      title: "Bienvenidos a la plataforma",
+      image: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80",
+      text: "Aquí verás avisos generales y tus cursos matriculados. Si eres admin, podrás crear cursos y matricular alumnos.",
+      createdAt: Date.now()
+    }
+  ],
+  courses: [
+    {
+      id: uid(),
+      name: "Ciencias Naturales 7mo",
+      desc: "Unidad 1: agua, materia, energía y cuidado del ambiente.",
+      createdAt: Date.now(),
+      noticeDoc: "### Avisos del curso\n\n- Primer encuentro: lunes.\n- Traer cuaderno.\n\nLink ejemplo: [Guía](https://example.com)",
+      participants: [] // emails
+    }
+  ]
+};
+
+const session = safeJsonParse(localStorage.getItem(SESSION_KEY));
+if(!session?.email){
+  location.href = "index.html"; // PROTECCIÓN
+}
+
+let data = loadData();
+
+/* ==========================
+   UI INIT
+========================== */
+const who = document.getElementById("who");
+const roleChip = document.getElementById("roleChip");
+const adminNav = document.getElementById("adminNav");
+
+who.textContent = `${session.name} · ${session.email}`;
+roleChip.textContent = session.role === "admin" ? "ADMIN" : "ESTUDIANTE";
+
+if(session.role !== "admin"){
+  adminNav.classList.add("hidden");
+  document.getElementById("view-admin").classList.add("hidden");
+}
+
+// Clock
+setInterval(()=> {
+  const d = new Date();
+  document.getElementById("clock").textContent = d.toLocaleString();
+}, 1000);
+
+// Navigation
+document.querySelectorAll(".navBtn").forEach(btn=>{
+  btn.onclick = () => {
+    document.querySelectorAll(".navBtn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    const v = btn.dataset.view;
+    showView(v);
+  };
+});
+function showView(v){
+  ["home","courses","admin"].forEach(x=>{
+    document.getElementById("view-"+x).classList.toggle("hidden", x!==v);
+  });
+  document.getElementById("helloTitle").textContent =
+    v==="home" ? "Dashboard" : v==="courses" ? "Mis cursos" : "Admin";
+  document.getElementById("helloSub").textContent =
+    v==="home" ? "Avisos generales y accesos rápidos." :
+    v==="courses" ? "Cursos donde estás matriculado." :
+    "Panel de creación y publicación.";
+}
+
+// Logout
+document.getElementById("logout").onclick = () => {
+  localStorage.removeItem(SESSION_KEY);
+  location.href = "index.html";
+};
+
+// Export/Import
+document.getElementById("btnExport").onclick = () => {
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "platform-data.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+document.getElementById("fileImport").addEventListener("change", async (e) => {
+  const file = e.target.files?.[0];
+  if(!file) return;
+  try{
+    const txt = await file.text();
+    const incoming = JSON.parse(txt);
+    if(!incoming || typeof incoming !== "object") throw new Error("Bad JSON");
+    data = incoming;
+    saveData(data);
+    renderAll();
+    alert("Importado correctamente.");
+  }catch(err){
+    alert("No pude importar: " + err.message);
+  }finally{
+    e.target.value = "";
+  }
+});
+
+/* ==========================
+   RENDER
+========================== */
+renderAll();
+
+function renderAll(){
+  renderAnnouncements();
+  renderCourses();
+  if(session.role === "admin"){
+    wireAdmin();
+  }
+}
+
+function renderAnnouncements(){
+  const list = document.getElementById("annList");
+  const anns = (data.announcements || []).slice().sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
+  document.getElementById("annCount").textContent = `${anns.length} avisos`;
+
+  list.innerHTML = "";
+  if(!anns.length){
+    list.innerHTML = `<div class="note">No hay avisos aún.</div>`;
+    return;
+  }
+  for(const a of anns){
+    const el = document.createElement("div");
+    el.className = "ann";
+    el.innerHTML = `
+      <div class="annImg">${a.image ? `<img src="${escapeAttr(a.image)}" alt="">` : ""}</div>
+      <div>
+        <p class="annTitle">${escapeHtml(a.title || "Aviso")}</p>
+        <p class="annText">${renderTextWithLinks(a.text || "")}</p>
+        <div class="annMeta">
+          <span class="tag">${new Date(a.createdAt || Date.now()).toLocaleDateString()}</span>
+          <span class="tag">General</span>
+        </div>
+      </div>
+    `;
+    list.appendChild(el);
+  }
+}
+
+function myEmail(){ return (session.email||"").toLowerCase(); }
+
+function renderCourses(){
+  const my = getMyCourses();
+
+  document.getElementById("myCourseCount").textContent = `${my.length} cursos`;
+  const myList = document.getElementById("myCourses");
+  const quick = document.getElementById("quickCourses");
+
+  myList.innerHTML = "";
+  quick.innerHTML = "";
+
+  if(!my.length){
+    const empty = `<div class="note">Aún no estás matriculado en cursos. Si eres admin, entra a Admin y matricula alumnos.</div>`;
+    myList.innerHTML = empty;
+    quick.innerHTML = empty;
+    return;
+  }
+
+  for(const c of my){
+    myList.appendChild(courseRow(c));
+  }
+
+  // Quick: máximo 3
+  my.slice(0,3).forEach(c => quick.appendChild(courseRow(c, true)));
+}
+
+function courseRow(c, compact=false){
+  const el = document.createElement("div");
+  el.className = "course";
+  el.innerHTML = `
+    <div>
+      <strong>${escapeHtml(c.name || "Curso")}</strong>
+      <span>${escapeHtml(c.desc || "Sin descripción")}</span>
+    </div>
+    <button class="go">Abrir</button>
+  `;
+  el.querySelector(".go").onclick = () => {
+    localStorage.setItem("student_platform_open_course", c.id);
+    location.href = "course.html";
+  };
+  return el;
+}
+
+function getMyCourses(){
+  const courses = (data.courses || []);
+  if(session.role === "admin") return courses.slice().sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
+  return courses.filter(c => (c.participants||[]).map(x=>String(x).toLowerCase()).includes(myEmail()))
+                .sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
+}
+
+/* ==========================
+   ADMIN
+========================== */
+let adminWired = false;
+function wireAdmin(){
+  if(adminWired) return;
+  adminWired = true;
+
+  const adminMsg = document.getElementById("adminMsg");
+  const annMsg = document.getElementById("annMsg");
+
+  const btnCreate = document.getElementById("btnCreateCourse");
+  const btnSeed = document.getElementById("btnSeedDemo");
+  const btnPost = document.getElementById("btnPostAnn");
+  const btnClear = document.getElementById("btnClearAnns");
+
+  btnCreate.onclick = () => {
+    adminMsg.className = "msg";
+    const name = document.getElementById("courseName").value.trim();
+    const desc = document.getElementById("courseDesc").value.trim();
+    if(!name){
+      adminMsg.className = "msg bad";
+      adminMsg.textContent = "Pon el nombre del curso.";
+      return;
+    }
+    const c = {
+      id: uid(),
+      name,
+      desc,
+      createdAt: Date.now(),
+      noticeDoc: "### Avisos del curso\n\n- Escribe aquí los avisos.\n- Links: [texto](https://link.com)\n",
+      participants: []
+    };
+    data.courses = data.courses || [];
+    data.courses.unshift(c);
+    saveData(data);
+    adminMsg.className = "msg good";
+    adminMsg.textContent = "Curso creado.";
+    document.getElementById("courseName").value = "";
+    document.getElementById("courseDesc").value = "";
+    renderCourses();
+  };
+
+  btnSeed.onclick = () => {
+    const demo = [
+      {name:"Física Séptimo Grado", desc:"Movimiento, energía y conceptos base."},
+      {name:"Matemática Séptimo Grado", desc:"Álgebra básica, fracciones y problemas."},
+      {name:"Lengua y Literatura 7mo", desc:"Comprensión lectora y textos expositivos."},
+      {name:"Crecimiento en Valores", desc:"Convivencia, respeto y responsabilidad."}
+    ];
+    for(const d of demo){
+      data.courses.unshift({
+        id: uid(),
+        name: d.name,
+        desc: d.desc,
+        createdAt: Date.now(),
+        noticeDoc: "### Avisos del curso\n\n- Próximamente...\n",
+        participants: []
+      });
+    }
+    saveData(data);
+    adminMsg.className = "msg warn";
+    adminMsg.textContent = "Demo cargado (4 cursos).";
+    renderCourses();
+  };
+
+  btnPost.onclick = () => {
+    annMsg.className = "msg";
+    const title = document.getElementById("annTitle").value.trim();
+    const image = document.getElementById("annImg").value.trim();
+    const text = document.getElementById("annText").value.trim();
+    if(!title || !text){
+      annMsg.className = "msg bad";
+      annMsg.textContent = "Título y texto son obligatorios.";
+      return;
+    }
+    data.announcements = data.announcements || [];
+    data.announcements.unshift({ id: uid(), title, image, text, createdAt: Date.now() });
+    saveData(data);
+    annMsg.className = "msg good";
+    annMsg.textContent = "Aviso publicado.";
+    document.getElementById("annTitle").value = "";
+    document.getElementById("annImg").value = "";
+    document.getElementById("annText").value = "";
+    renderAnnouncements();
+  };
+
+  btnClear.onclick = () => {
+    if(!confirm("¿Borrar TODOS los avisos generales?")) return;
+    data.announcements = [];
+    saveData(data);
+    annMsg.className = "msg warn";
+    annMsg.textContent = "Avisos borrados.";
+    renderAnnouncements();
+  };
+}
+
+/* ==========================
+   DATA HELPERS
+========================== */
+function loadData(){
+  const stored = safeJsonParse(localStorage.getItem(DATA_KEY));
+  if(stored) return stored;
+
+  // primer arranque: auto-matricular al admin en todo
+  const seed = structuredClone(DEFAULT_DATA);
+  if(session?.role === "admin"){
+    seed.courses.forEach(c => c.participants = Array.from(new Set([...(c.participants||[]), myEmail()])));
+  }
+  localStorage.setItem(DATA_KEY, JSON.stringify(seed));
+  return seed;
+}
+function saveData(d){
+  localStorage.setItem(DATA_KEY, JSON.stringify(d));
+}
+function safeJsonParse(s){ try{ return JSON.parse(s); }catch{ return null; } }
+
+function uid(){
+  return "id_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[m]));
+}
+function escapeAttr(s){
+  return String(s).replace(/"/g, "&quot;");
+}
+
+/* ==========================
+   LINK RENDER
+   - Soporta:
+     1) URLs directas
+     2) Formato [texto](url)
+========================== */
+function renderTextWithLinks(text){
+  const safe = escapeHtml(text);
+
+  // 1) formato [texto](url)
+  const withMdLinks = safe.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (m, t, u) => {
+    return `<a href="${escapeAttr(u)}" target="_blank" rel="noopener">${t}</a>`;
+  });
+
+  // 2) urls directas
+  const withUrls = withMdLinks.replace(/(https?:\/\/[^\s<]+)/g, (u) => {
+    // si ya está dentro de un href, no tocar
+    if(u.includes('href="')) return u;
+    return `<a href="${escapeAttr(u)}" target="_blank" rel="noopener">${u}</a>`;
+  });
+
+  // Saltos de línea
+  return withUrls.replace(/\n/g, "<br>");
+}
+</script>
+</body>
+</html>
