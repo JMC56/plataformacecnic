@@ -363,19 +363,15 @@
     </div>
 
     <div class="small" style="margin-top:10px">
-      <span class="chip">Datos</span>
+      <span class="chip">Servidor</span>
       <div style="display:flex;gap:8px;align-items:center">
-        <button class="logout" id="btnExport" title="Exportar JSON">Export</button>
-        <label class="logout" style="cursor:pointer">
-          Import
-          <input id="fileImport" type="file" accept="application/json" style="display:none">
-        </label>
+        <button class="logout" id="btnReload" title="Recargar desde data.json">Reload</button>
       </div>
     </div>
 
     <p class="note" style="margin-top:12px">
-      Nota: Esta versión guarda todo en <b>localStorage</b>.
-      Si querés “guardar como JSON”, usa <b>Export</b> y luego <b>Import</b>.
+      Datos persistentes vía <b>api.php + data.json</b>.
+      Si reinicias el navegador, los cursos y avisos siguen.
     </p>
   </aside>
 
@@ -477,39 +473,37 @@
 
 <script>
 /* ==========================
-   CONFIG + STORAGE
+   API (PHP + JSON)
 ========================== */
-const SESSION_KEY = "student_platform_session";
-const DATA_KEY = "student_platform_data_v1";
-
-const DEFAULT_DATA = {
-  announcements: [
-    {
-      id: uid(),
-      title: "Bienvenidos a la plataforma",
-      image: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80",
-      text: "Aquí verás avisos generales y tus cursos matriculados. Si eres admin, podrás crear cursos y matricular alumnos.",
-      createdAt: Date.now()
-    }
-  ],
-  courses: [
-    {
-      id: uid(),
-      name: "Ciencias Naturales 7mo",
-      desc: "Unidad 1: agua, materia, energía y cuidado del ambiente.",
-      createdAt: Date.now(),
-      noticeDoc: "### Avisos del curso\n\n- Primer encuentro: lunes.\n- Traer cuaderno.\n\nLink ejemplo: [Guía](https://example.com)",
-      participants: [] // emails
-    }
-  ]
-};
-
-const session = safeJsonParse(localStorage.getItem(SESSION_KEY));
-if(!session?.email){
-  location.href = "index.html"; // PROTECCIÓN
+const API = "api.php";
+async function apiGet(){
+  const res = await fetch(`${API}?action=get`, { cache:"no-store" });
+  if(!res.ok) throw new Error("API GET failed");
+  return await res.json();
+}
+async function apiPost(action, payload){
+  const res = await fetch(`${API}?action=${encodeURIComponent(action)}`, {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify(payload || {})
+  });
+  if(!res.ok) throw new Error("API POST failed");
+  return await res.json();
 }
 
-let data = loadData();
+/* ==========================
+   SESSION
+========================== */
+const SESSION_KEY = "student_platform_session";
+const session = safeJsonParse(localStorage.getItem(SESSION_KEY));
+if(!session?.email){
+  location.href = "index.html";
+}
+
+/* ==========================
+   DATA (from server)
+========================== */
+let data = { announcements: [], courses: [] };
 
 /* ==========================
    UI INIT
@@ -528,8 +522,7 @@ if(session.role !== "admin"){
 
 // Clock
 setInterval(()=> {
-  const d = new Date();
-  document.getElementById("clock").textContent = d.toLocaleString();
+  document.getElementById("clock").textContent = new Date().toLocaleString();
 }, 1000);
 
 // Navigation
@@ -537,8 +530,7 @@ document.querySelectorAll(".navBtn").forEach(btn=>{
   btn.onclick = () => {
     document.querySelectorAll(".navBtn").forEach(b=>b.classList.remove("active"));
     btn.classList.add("active");
-    const v = btn.dataset.view;
-    showView(v);
+    showView(btn.dataset.view);
   };
 });
 function showView(v){
@@ -559,45 +551,34 @@ document.getElementById("logout").onclick = () => {
   location.href = "index.html";
 };
 
-// Export/Import
-document.getElementById("btnExport").onclick = () => {
-  const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "platform-data.json";
-  a.click();
-  URL.revokeObjectURL(a.href);
+// Reload
+document.getElementById("btnReload").onclick = async () => {
+  await loadServer();
 };
 
-document.getElementById("fileImport").addEventListener("change", async (e) => {
-  const file = e.target.files?.[0];
-  if(!file) return;
-  try{
-    const txt = await file.text();
-    const incoming = JSON.parse(txt);
-    if(!incoming || typeof incoming !== "object") throw new Error("Bad JSON");
-    data = incoming;
-    saveData(data);
-    renderAll();
-    alert("Importado correctamente.");
-  }catch(err){
-    alert("No pude importar: " + err.message);
-  }finally{
-    e.target.value = "";
-  }
-});
-
 /* ==========================
-   RENDER
+   LOAD + RENDER
 ========================== */
-renderAll();
+(async function boot(){
+  await loadServer();
+  renderAll();
+  if(session.role === "admin") wireAdmin();
+})();
+
+async function loadServer(){
+  try{
+    const server = await apiGet();
+    data = server || { announcements: [], courses: [] };
+    renderAll();
+  }catch(err){
+    console.error(err);
+    alert("No pude cargar data.json. Revisa que api.php y data.json estén en la misma carpeta y que data.json tenga permisos de escritura.");
+  }
+}
 
 function renderAll(){
   renderAnnouncements();
   renderCourses();
-  if(session.role === "admin"){
-    wireAdmin();
-  }
 }
 
 function renderAnnouncements(){
@@ -610,6 +591,7 @@ function renderAnnouncements(){
     list.innerHTML = `<div class="note">No hay avisos aún.</div>`;
     return;
   }
+
   for(const a of anns){
     const el = document.createElement("div");
     el.className = "ann";
@@ -630,32 +612,34 @@ function renderAnnouncements(){
 
 function myEmail(){ return (session.email||"").toLowerCase(); }
 
+function getMyCourses(){
+  const courses = (data.courses || []);
+  if(session.role === "admin") return courses.slice().sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
+  return courses.filter(c => (c.participants||[]).map(x=>String(x).toLowerCase()).includes(myEmail()))
+                .sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
+}
+
 function renderCourses(){
   const my = getMyCourses();
-
   document.getElementById("myCourseCount").textContent = `${my.length} cursos`;
-  const myList = document.getElementById("myCourses");
-  const quick = document.getElementById("quickCourses");
 
+  const myList = document.getElementById("myCourses");
+  const quick  = document.getElementById("quickCourses");
   myList.innerHTML = "";
-  quick.innerHTML = "";
+  quick.innerHTML  = "";
 
   if(!my.length){
-    const empty = `<div class="note">Aún no estás matriculado en cursos. Si eres admin, entra a Admin y matricula alumnos.</div>`;
+    const empty = `<div class="note">No hay cursos para mostrar todavía.</div>`;
     myList.innerHTML = empty;
     quick.innerHTML = empty;
     return;
   }
 
-  for(const c of my){
-    myList.appendChild(courseRow(c));
-  }
-
-  // Quick: máximo 3
-  my.slice(0,3).forEach(c => quick.appendChild(courseRow(c, true)));
+  for(const c of my) myList.appendChild(courseRow(c));
+  my.slice(0,3).forEach(c => quick.appendChild(courseRow(c)));
 }
 
-function courseRow(c, compact=false){
+function courseRow(c){
   const el = document.createElement("div");
   el.className = "course";
   el.innerHTML = `
@@ -672,15 +656,8 @@ function courseRow(c, compact=false){
   return el;
 }
 
-function getMyCourses(){
-  const courses = (data.courses || []);
-  if(session.role === "admin") return courses.slice().sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
-  return courses.filter(c => (c.participants||[]).map(x=>String(x).toLowerCase()).includes(myEmail()))
-                .sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
-}
-
 /* ==========================
-   ADMIN
+   ADMIN ACTIONS (SERVER)
 ========================== */
 let adminWired = false;
 function wireAdmin(){
@@ -691,12 +668,14 @@ function wireAdmin(){
   const annMsg = document.getElementById("annMsg");
 
   const btnCreate = document.getElementById("btnCreateCourse");
-  const btnSeed = document.getElementById("btnSeedDemo");
-  const btnPost = document.getElementById("btnPostAnn");
-  const btnClear = document.getElementById("btnClearAnns");
+  const btnSeed   = document.getElementById("btnSeedDemo");
+  const btnPost   = document.getElementById("btnPostAnn");
+  const btnClear  = document.getElementById("btnClearAnns");
 
-  btnCreate.onclick = () => {
+  btnCreate.onclick = async () => {
     adminMsg.className = "msg";
+    adminMsg.textContent = "Creando...";
+
     const name = document.getElementById("courseName").value.trim();
     const desc = document.getElementById("courseDesc").value.trim();
     if(!name){
@@ -704,6 +683,7 @@ function wireAdmin(){
       adminMsg.textContent = "Pon el nombre del curso.";
       return;
     }
+
     const c = {
       id: uid(),
       name,
@@ -712,122 +692,135 @@ function wireAdmin(){
       noticeDoc: "### Avisos del curso\n\n- Escribe aquí los avisos.\n- Links: [texto](https://link.com)\n",
       participants: []
     };
-    data.courses = data.courses || [];
-    data.courses.unshift(c);
-    saveData(data);
-    adminMsg.className = "msg good";
-    adminMsg.textContent = "Curso creado.";
-    document.getElementById("courseName").value = "";
-    document.getElementById("courseDesc").value = "";
-    renderCourses();
+
+    try{
+      const r = await apiPost("createCourse", { course: c });
+      if(!r.ok && !r.data) throw new Error(r.error || "createCourse failed");
+      data = r.data || data;
+
+      adminMsg.className = "msg good";
+      adminMsg.textContent = "Curso creado (guardado en data.json).";
+      document.getElementById("courseName").value = "";
+      document.getElementById("courseDesc").value = "";
+
+      renderCourses();
+      showView("courses");
+    }catch(err){
+      console.error(err);
+      adminMsg.className = "msg bad";
+      adminMsg.textContent = "Error creando curso. Revisa permisos de data.json.";
+    }
   };
 
-  btnSeed.onclick = () => {
+  btnSeed.onclick = async () => {
+    adminMsg.className = "msg";
+    adminMsg.textContent = "Cargando demo...";
+
     const demo = [
       {name:"Física Séptimo Grado", desc:"Movimiento, energía y conceptos base."},
       {name:"Matemática Séptimo Grado", desc:"Álgebra básica, fracciones y problemas."},
       {name:"Lengua y Literatura 7mo", desc:"Comprensión lectora y textos expositivos."},
       {name:"Crecimiento en Valores", desc:"Convivencia, respeto y responsabilidad."}
-    ];
-    for(const d of demo){
-      data.courses.unshift({
-        id: uid(),
-        name: d.name,
-        desc: d.desc,
-        createdAt: Date.now(),
-        noticeDoc: "### Avisos del curso\n\n- Próximamente...\n",
-        participants: []
-      });
+    ].map(d => ({
+      id: uid(),
+      name: d.name,
+      desc: d.desc,
+      createdAt: Date.now(),
+      noticeDoc: "### Avisos del curso\n\n- Próximamente...\n",
+      participants: []
+    }));
+
+    try{
+      const r = await apiPost("seedDemo", { courses: demo });
+      data = r.data || data;
+
+      adminMsg.className = "msg warn";
+      adminMsg.textContent = "Demo cargado (guardado en data.json).";
+      renderCourses();
+      showView("courses");
+    }catch(err){
+      console.error(err);
+      adminMsg.className = "msg bad";
+      adminMsg.textContent = "Error cargando demo. Revisa permisos de data.json.";
     }
-    saveData(data);
-    adminMsg.className = "msg warn";
-    adminMsg.textContent = "Demo cargado (4 cursos).";
-    renderCourses();
   };
 
-  btnPost.onclick = () => {
+  btnPost.onclick = async () => {
     annMsg.className = "msg";
+    annMsg.textContent = "Publicando...";
+
     const title = document.getElementById("annTitle").value.trim();
     const image = document.getElementById("annImg").value.trim();
-    const text = document.getElementById("annText").value.trim();
+    const text  = document.getElementById("annText").value.trim();
+
     if(!title || !text){
       annMsg.className = "msg bad";
       annMsg.textContent = "Título y texto son obligatorios.";
       return;
     }
-    data.announcements = data.announcements || [];
-    data.announcements.unshift({ id: uid(), title, image, text, createdAt: Date.now() });
-    saveData(data);
-    annMsg.className = "msg good";
-    annMsg.textContent = "Aviso publicado.";
-    document.getElementById("annTitle").value = "";
-    document.getElementById("annImg").value = "";
-    document.getElementById("annText").value = "";
-    renderAnnouncements();
+
+    const ann = { id: uid(), title, image, text, createdAt: Date.now() };
+
+    try{
+      const r = await apiPost("postAnnouncement", { announcement: ann });
+      data = r.data || data;
+
+      annMsg.className = "msg good";
+      annMsg.textContent = "Aviso publicado (guardado en data.json).";
+      document.getElementById("annTitle").value = "";
+      document.getElementById("annImg").value = "";
+      document.getElementById("annText").value = "";
+
+      renderAnnouncements();
+      showView("home");
+    }catch(err){
+      console.error(err);
+      annMsg.className = "msg bad";
+      annMsg.textContent = "Error publicando. Revisa permisos de data.json.";
+    }
   };
 
-  btnClear.onclick = () => {
+  btnClear.onclick = async () => {
     if(!confirm("¿Borrar TODOS los avisos generales?")) return;
-    data.announcements = [];
-    saveData(data);
-    annMsg.className = "msg warn";
-    annMsg.textContent = "Avisos borrados.";
-    renderAnnouncements();
+    annMsg.className = "msg";
+    annMsg.textContent = "Borrando...";
+
+    try{
+      const r = await apiPost("clearAnnouncements", {});
+      data = r.data || data;
+      annMsg.className = "msg warn";
+      annMsg.textContent = "Avisos borrados (data.json actualizado).";
+      renderAnnouncements();
+    }catch(err){
+      console.error(err);
+      annMsg.className = "msg bad";
+      annMsg.textContent = "Error borrando. Revisa permisos de data.json.";
+    }
   };
 }
 
 /* ==========================
-   DATA HELPERS
+   HELPERS
 ========================== */
-function loadData(){
-  const stored = safeJsonParse(localStorage.getItem(DATA_KEY));
-  if(stored) return stored;
-
-  // primer arranque: auto-matricular al admin en todo
-  const seed = structuredClone(DEFAULT_DATA);
-  if(session?.role === "admin"){
-    seed.courses.forEach(c => c.participants = Array.from(new Set([...(c.participants||[]), myEmail()])));
-  }
-  localStorage.setItem(DATA_KEY, JSON.stringify(seed));
-  return seed;
-}
-function saveData(d){
-  localStorage.setItem(DATA_KEY, JSON.stringify(d));
-}
 function safeJsonParse(s){ try{ return JSON.parse(s); }catch{ return null; } }
-
-function uid(){
-  return "id_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
-}
+function uid(){ return "id_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16); }
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[m]));
 }
-function escapeAttr(s){
-  return String(s).replace(/"/g, "&quot;");
-}
+function escapeAttr(s){ return String(s).replace(/"/g, "&quot;"); }
 
-/* ==========================
-   LINK RENDER
-   - Soporta:
-     1) URLs directas
-     2) Formato [texto](url)
-========================== */
 function renderTextWithLinks(text){
   const safe = escapeHtml(text);
 
-  // 1) formato [texto](url)
   const withMdLinks = safe.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (m, t, u) => {
     return `<a href="${escapeAttr(u)}" target="_blank" rel="noopener">${t}</a>`;
   });
 
-  // 2) urls directas
   const withUrls = withMdLinks.replace(/(https?:\/\/[^\s<]+)/g, (u) => {
-    // si ya está dentro de un href, no tocar
     if(u.includes('href="')) return u;
     return `<a href="${escapeAttr(u)}" target="_blank" rel="noopener">${u}</a>`;
   });
 
-  // Saltos de línea
   return withUrls.replace(/\n/g, "<br>");
 }
 </script>
