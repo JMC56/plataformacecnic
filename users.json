@@ -1,0 +1,8 @@
+{
+  "adminEmail": "admin@tucolegio.com",
+  "users": [
+    { "email": "james261067@gmail.com", "password": "1234", "name": "Administrador", "role": "admin" },
+    { "email": "alumno1@tucolegio.com", "password": "1234", "name": "Alumno Uno", "role": "student" },
+    { "email": "alumno2@tucolegio.com", "password": "1234", "name": "Alumno Dos", "role": "student" }
+  ]
+}
